@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from .models import Usuario
 from .serializers import UsuarioSerializer
 from django.contrib.auth.models import User
+from .permissions import EsAdministrador 
 
 class RegistroUsuarioView(generics.CreateAPIView):
     """
@@ -23,3 +24,27 @@ class PerfilUsuarioView(APIView):
     def get(self, request):
         serializer = UsuarioSerializer(request.user)
         return Response(serializer.data)
+    
+# 🔹 Listar todos los usuarios (Solo administradores)
+class ListarUsuariosView(generics.ListAPIView):
+    queryset = Usuario.objects.all()
+    serializer_class = UsuarioSerializer
+    permission_classes = [IsAuthenticated]  # 🔹 Solo autenticados pueden ver esto
+
+    def get_queryset(self):
+        # Solo los administradores pueden ver la lista de usuarios
+        if self.request.user.rol == "administrador":
+            return Usuario.objects.all()
+        return Usuario.objects.none()  # No devuelve nada si no es admin
+    
+# 🔹 Editar un usuario (Solo administradores pueden modificar cualquier usuario)
+class EditarUsuarioView(generics.UpdateAPIView):
+    queryset = Usuario.objects.all()
+    serializer_class = UsuarioSerializer
+    permission_classes = [IsAuthenticated]  # 🔹 Solo autenticados
+
+    def get_queryset(self):
+        # Solo los administradores pueden modificar otros usuarios
+        if self.request.user.rol == "administrador":
+            return Usuario.objects.all()
+        return Usuario.objects.none()  # No devuelve nada si no es admin

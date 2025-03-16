@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Usuario
 
 class UsuarioSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)  # 🔹 Ahora la contraseña es opcional
     class Meta:
         model = Usuario
         fields = ['id', 'username', 'email', 'password', 'rol']
@@ -19,3 +20,13 @@ class UsuarioSerializer(serializers.ModelSerializer):
         usuario.set_password(validated_data['password'])  # 🔹 Encripta correctamente la contraseña
         usuario.save()
         return usuario
+    
+    def update(self, instance, validated_data):
+        """
+        Permite actualizar usuarios sin requerir la contraseña,
+        pero si se proporciona, la encripta antes de guardarla.
+        """
+        if 'password' in validated_data:
+            instance.set_password(validated_data.pop('password'))  # 🔹 Encripta la nueva contraseña si se envía
+
+        return super().update(instance, validated_data)

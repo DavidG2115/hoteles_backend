@@ -70,7 +70,7 @@ class CancelarReservacionView(generics.UpdateAPIView):
             "Cancelación de Reservación",
             f"Estimado {reservacion.nombre_cliente},\n\n"
             f"Su reservación con folio {reservacion.folio} ha sido cancelada por el hotel.",
-            "noreply@hoteles.com",
+            "garcdavid2101@gmail.com",
             [reservacion.email_cliente],
             fail_silently=True
         )
@@ -100,7 +100,7 @@ class ModificarReservacionView(generics.UpdateAPIView):
             f"Fecha de entrada: {reservacion.fecha_inicio}\n"
             f"Fecha de salida: {reservacion.fecha_fin}\n"
             f"Estado: {reservacion.estado}",
-            "noreply@hoteles.com",
+            "garcdavid2101@gmail.com",
             [reservacion.email_cliente],
             fail_silently=True
         )
@@ -114,3 +114,15 @@ class ReservacionesHotelView(generics.ListAPIView):
     def get_queryset(self):
         hotel_id = self.kwargs["hotel_id"]
         return Reservacion.objects.filter(habitacion__hotel_id=hotel_id)
+    
+# 🔹 Listar todas las reservaciones (Solo administradores y gerentes)
+class ListarTodasReservacionesView(generics.ListAPIView):  # 🔹 ListAPIView permite GET
+    queryset = Reservacion.objects.all()
+    serializer_class = ReservacionSerializer
+    permission_classes = [IsAuthenticated]  # Solo autenticados
+
+    def get_queryset(self):
+        # Solo administradores y gerentes pueden ver las reservaciones
+        if self.request.user.rol in ["administrador", "gerente"]:
+            return Reservacion.objects.all()
+        return Reservacion.objects.none()  # Si no es admin/gerente, no devuelve nada
