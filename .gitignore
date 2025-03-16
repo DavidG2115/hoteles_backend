@@ -1,0 +1,23 @@
+# Archivos y carpetas de Django que no deben subirse
+__pycache__/
+*.pyc
+*.pyo
+*.sqlite3
+*.log
+
+# Configuración de entornos virtuales
+venv/
+env/
+*.env
+
+# Archivos de configuración de base de datos local
+db.sqlite3
+.env
+
+# Configuración de IDEs
+.vscode/
+.idea/
+
+# Archivos de dependencias de Python
+*.egg-info/
+*.pid
