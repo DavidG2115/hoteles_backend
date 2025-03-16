@@ -11,6 +11,9 @@ class Usuario(AbstractUser):
     )
 
     rol = models.CharField(max_length=20, choices=ROLES, default='cliente')
+    
+    # Configurar el campo de autenticación principal
+    USERNAME_FIELD = 'username'  # Django autenticará con username
 
     # Evitar conflictos con el modelo auth.User de Django
     groups = models.ManyToManyField(Group, related_name="usuario_groups", blank=True)
