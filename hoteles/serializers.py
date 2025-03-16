@@ -8,6 +8,7 @@ class HotelSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class HabitacionSerializer(serializers.ModelSerializer):
+    hotel = serializers.ReadOnlyField(source='hotel.id') 
     class Meta:
         model = Habitacion
         fields = '__all__'
