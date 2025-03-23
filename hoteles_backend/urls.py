@@ -22,5 +22,8 @@ urlpatterns = [
     path('api/usuarios/', include('usuarios.urls')),
     path('api/', include('hoteles.urls')),
     path('api/', include('reservaciones.urls')),
-    path('api/', include('servicios.urls')),  # Agregar rutas de servicios adicionales
+    path('api/', include('servicios.urls')),
+    path('api/', include('reportes.urls')),
+
+
 ]
