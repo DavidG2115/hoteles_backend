@@ -10,6 +10,7 @@ class ServicioSerializer(serializers.ModelSerializer):
 
 class ReservacionServicioSerializer(serializers.ModelSerializer):
     reservacion = serializers.ReadOnlyField(source='reservacion.folio') 
+    servicio = serializers.ReadOnlyField(source='servicio.id')
     class Meta:
         model = ReservacionServicio
         fields = '__all__'

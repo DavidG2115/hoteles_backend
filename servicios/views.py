@@ -38,8 +38,13 @@ class AgregarServicioReservacionView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]  # 🔹 Usuarios autenticados pueden agregar servicios
 
     def perform_create(self, serializer):
-        reservacion = get_object_or_404(Reservacion, folio=self.kwargs["folio"])
-        serializer.save(reservacion=reservacion)
+        folio = self.kwargs["folio"]
+        reservacion = get_object_or_404(Reservacion, folio=folio)
+
+        servicio_id = self.request.data.get("servicio")
+        servicio = get_object_or_404(Servicio, id=servicio_id)
+
+        serializer.save(reservacion=reservacion, servicio=servicio)
         
 # 🔹 Listar servicios asociados a una reservación
 class ServiciosReservacionView(generics.ListAPIView):
@@ -50,3 +55,9 @@ class ServiciosReservacionView(generics.ListAPIView):
         folio = self.kwargs["folio"]
         reservacion = get_object_or_404(Reservacion, folio=folio)
         return ReservacionServicio.objects.filter(reservacion=reservacion)
+
+# 🔹 Editar servicios asociados a una reservación
+class EditarServicioReservacionView(generics.UpdateAPIView):
+    queryset = ReservacionServicio.objects.all()
+    serializer_class = ReservacionServicioSerializer
+    permission_classes = [IsAuthenticated] 
