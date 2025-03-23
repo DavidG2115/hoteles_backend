@@ -10,4 +10,5 @@ urlpatterns = [
     path('perfil/', PerfilUsuarioView.as_view(), name='perfil_usuario'),  # Obtener perfil con Bearer Token
     path('usuarios/', ListarUsuariosView.as_view(), name='obtener_usuarios'),  # Listar usuarios
     path('<int:pk>/editar/', EditarUsuarioView.as_view(), name='editar_usuario'),  # Editar usuario
+    path('usuarios/<int:pk>/eliminar/', EliminarUsuarioView.as_view(), name='eliminar_usuario'), # Eliminar usuario
 ]

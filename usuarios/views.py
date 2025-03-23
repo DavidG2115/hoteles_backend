@@ -48,3 +48,23 @@ class EditarUsuarioView(generics.UpdateAPIView):
         if self.request.user.rol == "administrador":
             return Usuario.objects.all()
         return Usuario.objects.none()  # No devuelve nada si no es admin
+    
+    
+#Eliminacion de usuarios Solo Admin
+class EliminarUsuarioView(generics.DestroyAPIView):
+    queryset = Usuario.objects.all()
+    serializer_class = UsuarioSerializer
+    permission_classes = [IsAuthenticated]  # Solo admins lo controlarán en el método
+
+    def delete(self, request, *args, **kwargs):
+        usuario = self.get_object()
+
+        # Solo admins pueden eliminar usuarios
+        if request.user.rol != "administrador":
+            return Response(
+                {"detail": "No tienes permisos para eliminar usuarios."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        usuario.delete()
+        return Response({"mensaje": "Usuario eliminado correctamente."}, status=status.HTTP_200_OK)
