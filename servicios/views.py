@@ -40,3 +40,13 @@ class AgregarServicioReservacionView(generics.CreateAPIView):
     def perform_create(self, serializer):
         reservacion = get_object_or_404(Reservacion, folio=self.kwargs["folio"])
         serializer.save(reservacion=reservacion)
+        
+# 🔹 Listar servicios asociados a una reservación
+class ServiciosReservacionView(generics.ListAPIView):
+    serializer_class = ReservacionServicioSerializer
+    permission_classes = [IsAuthenticated]  # Puedes cambiarlo a AllowAny si quieres que el turista lo vea sin login
+
+    def get_queryset(self):
+        folio = self.kwargs["folio"]
+        reservacion = get_object_or_404(Reservacion, folio=folio)
+        return ReservacionServicio.objects.filter(reservacion=reservacion)
