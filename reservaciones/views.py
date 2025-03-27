@@ -9,6 +9,7 @@ from hoteles.serializers import HabitacionSerializer
 from rest_framework.response import Response
 from django.core.mail import send_mail
 from .permissions import EsAdministradorOGerente  # 🔹 Importar el nuevo permiso
+from usuarios.permissions import PerteneceAlHotel
 
 # 🔹 Verificar disponibilidad de habitaciones por fechas
 class DisponibilidadHabitacionesView(generics.ListAPIView):
@@ -56,7 +57,7 @@ class ReservacionDetailView(generics.RetrieveAPIView):
 class CancelarReservacionView(generics.UpdateAPIView):
     queryset = Reservacion.objects.all()
     serializer_class = ReservacionSerializer
-    permission_classes = [EsAdministradorOGerente]  # 🔹 Permitir solo a admins y gerentes
+    permission_classes = [EsAdministradorOGerente, PerteneceAlHotel]  # 🔹 Permitir solo a admins y gerentes
 
     def patch(self, request, *args, **kwargs):
         reservacion = get_object_or_404(Reservacion, folio=self.kwargs["folio"])

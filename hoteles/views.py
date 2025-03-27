@@ -15,7 +15,7 @@ class HotelListCreateView(generics.ListCreateAPIView):
         return [AllowAny()]  # 🔹 Cualquier usuario puede ver hoteles
 
     def perform_create(self, serializer):
-        serializer.save(propietario=self.request.user)
+        serializer.save()
 
 # 🔹 Ver, Editar y Eliminar un Hotel (Solo administradores)
 class HotelDetailView(generics.RetrieveUpdateDestroyAPIView):

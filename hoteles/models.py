@@ -1,6 +1,7 @@
 from django.db import models
 from usuarios.models import Usuario
 
+
 class Hotel(models.Model):
     nombre = models.CharField(max_length=255)
     direccion = models.TextField()
