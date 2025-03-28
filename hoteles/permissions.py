@@ -6,3 +6,10 @@ class EsAdministrador(BasePermission):
     """
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.rol == "administrador"
+
+class EsSuperAdmin(BasePermission):
+    """
+    Permite el acceso solo a superusuarios (is_superuser=True)
+    """
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.is_superuser
