@@ -13,22 +13,6 @@ from .permissions import EsAdministradorOGerente  # 🔹 Importar el nuevo permi
 from usuarios.permissions import PerteneceAlHotel
 from usuarios.models import EmpleadoHotel
 
-# 🔹 Verificar disponibilidad de habitaciones por fechas
-class DisponibilidadHabitacionesView(generics.ListAPIView):
-    serializer_class = HabitacionSerializer  # 🔹 Cambiar a HabitacionSerializer
-    permission_classes = [AllowAny]
-
-    def get_queryset(self):
-        hotel_id = self.request.query_params.get('hotel', None)
-        fecha_inicio = self.request.query_params.get('fecha_inicio', None)
-        fecha_fin = self.request.query_params.get('fecha_fin', None)
-
-        if hotel_id and fecha_inicio and fecha_fin:
-            return Habitacion.objects.filter(
-                hotel_id=hotel_id,
-                disponible=True  # 🔹 Solo habitaciones disponibles
-            )
-        return Habitacion.objects.none()
 
 # 🔹 Crear una Reservación
 class CrearReservacionView(generics.CreateAPIView):

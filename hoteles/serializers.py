@@ -23,8 +23,15 @@ class HotelSerializer(serializers.ModelSerializer):
 
         return Hotel.objects.create(propietario=propietario, **validated_data)
 
-class HabitacionSerializer(serializers.ModelSerializer):
-    hotel = serializers.ReadOnlyField(source='hotel.id') 
+class HabitacionPublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = Habitacion
-        fields = '__all__'
+        fields = ["id", "numero", "tipo", "costo_por_noche", "disponible"]
+
+        
+
+class HabitacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Habitacion
+        fields = "__all__"
+

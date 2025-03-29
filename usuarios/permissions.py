@@ -8,6 +8,14 @@ class EsAdministrador(BasePermission):
     """
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.rol == "administrador"
+    
+class EsAdministradorOGerente(BasePermission):
+    """
+    Permiso para permitir solo a administradores y gerentes pueden asingar usuarios a hoteles.
+    """
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.rol in ["administrador", "gerente"]
+
 
 class PerteneceAlHotel(BasePermission):
     """
@@ -32,3 +40,12 @@ class PerteneceAlHotel(BasePermission):
 
         # Si está asignado como empleado del hotel
         return EmpleadoHotel.objects.filter(usuario=request.user, hotel=hotel).exists()
+    
+    
+class EsJefeCamaristas(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.rol == "camarista"
+
+class EsJefeMantenimiento(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.rol == "mantenimiento"
