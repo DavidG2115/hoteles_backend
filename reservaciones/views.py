@@ -1,7 +1,8 @@
-from rest_framework import generics, serializers, status
+from rest_framework import generics, serializers, status, permissions
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Reservacion
-from .serializers import ReservacionSerializer
+from rest_framework.exceptions import PermissionDenied
+from .models import Reservacion, SolicitudModificacionReservacion
+from .serializers import ReservacionSerializer, SolicitudModificacionSerializer
 from hoteles.models import Habitacion
 from django.shortcuts import get_object_or_404
 from hoteles.models import Habitacion
@@ -10,6 +11,7 @@ from rest_framework.response import Response
 from django.core.mail import send_mail
 from .permissions import EsAdministradorOGerente  # 🔹 Importar el nuevo permiso
 from usuarios.permissions import PerteneceAlHotel
+from usuarios.models import EmpleadoHotel
 
 # 🔹 Verificar disponibilidad de habitaciones por fechas
 class DisponibilidadHabitacionesView(generics.ListAPIView):
@@ -127,3 +129,103 @@ class ListarTodasReservacionesView(generics.ListAPIView):  # 🔹 ListAPIView pe
         if self.request.user.rol in ["administrador", "gerente"]:
             return Reservacion.objects.all()
         return Reservacion.objects.none()  # Si no es admin/gerente, no devuelve nada
+    
+    
+class CrearSolicitudModificacionView(generics.CreateAPIView):
+    queryset = SolicitudModificacionReservacion.objects.all()
+    serializer_class = SolicitudModificacionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        reservacion = serializer.validated_data["reservacion"]
+
+        if user.rol != "recepcionista":
+            raise PermissionDenied("Solo los recepcionistas pueden crear solicitudes.")
+
+        hotel_reservacion = reservacion.habitacion.hotel
+        pertenece = EmpleadoHotel.objects.filter(usuario=user, hotel=hotel_reservacion).exists()
+
+        if not pertenece:
+            raise PermissionDenied("No perteneces al hotel de esta reservación.")
+
+        serializer.save(solicitante=user)
+        
+        
+class AprobarSolicitudView(generics.UpdateAPIView):
+    queryset = SolicitudModificacionReservacion.objects.all()
+    serializer_class = SolicitudModificacionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        solicitud = serializer.instance
+        print("🔁 Se intenta aprobar/rechazar solicitud...")
+        
+
+        # Verificar que sea gerente del hotel correspondiente
+        hotel = solicitud.reservacion.habitacion.hotel
+        if user.rol != "administrador" and user.rol != "gerente" or not EmpleadoHotel.objects.filter(usuario=user, hotel=hotel).exists():
+            raise PermissionDenied("Solo el gerente del hotel puede aprobar esta solicitud.")
+        
+        
+
+
+        solicitud = serializer.save()
+        reservacion = solicitud.reservacion
+
+        if solicitud.estado == "aprobada":
+            if solicitud.tipo == "eliminacion":
+                reservacion.estado = "cancelada"
+                reservacion.save()
+                reservacion.habitacion.disponible = True
+                reservacion.habitacion.save()
+
+                send_mail(
+                    "Cancelación de Reservación",
+                    f"Estimado {reservacion.nombre_cliente},\n\n"
+                    f"Su reservación con folio {reservacion.folio} ha sido cancelada por el hotel.",
+                    "noreply@hoteles.com",
+                    [reservacion.email_cliente],
+                    fail_silently=True
+                )
+
+            elif solicitud.tipo == "modificacion":
+                # Aquí puedes aplicar más cambios si se guardan (como nuevas fechas)
+                reservacion.estado = "modificada"
+                reservacion.save()
+
+                send_mail(
+                    "Actualización de Reservación",
+                    f"Estimado {reservacion.nombre_cliente},\n\n"
+                    f"Su reservación con folio {reservacion.folio} ha sido modificada por el hotel.",
+                    "noreply@hoteles.com",
+                    [reservacion.email_cliente],
+                    fail_silently=True
+                )
+
+        elif solicitud.estado == "rechazada":
+            # Puedes agregar lógica para notificar al solicitante si deseas
+            pass
+        
+        return Response({"mensaje": "Solicitud actualizada."}, status=status.HTTP_200_OK)
+
+class SolicitudesPendientesView(generics.ListAPIView):
+    serializer_class = SolicitudModificacionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # Validar que sea gerente
+        if user.rol != "administrador" and user.rol != "gerente":
+            return SolicitudModificacionReservacion.objects.none()
+
+        # Obtener hoteles donde trabaja el gerente
+        hoteles_ids = EmpleadoHotel.objects.filter(usuario=user).values_list("hotel_id", flat=True)
+
+        # Filtrar solicitudes pendientes de reservaciones que pertenecen a esos hoteles
+        return SolicitudModificacionReservacion.objects.filter(
+            estado="pendiente",
+            reservacion__habitacion__hotel_id__in=hoteles_ids
+        )

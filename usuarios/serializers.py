@@ -29,20 +29,34 @@ class UsuarioSerializer(serializers.ModelSerializer):
 # 🔹 Serializer para asignar empleados a un hotel
 class AsignarEmpleadoSerializer(serializers.Serializer):
     usuario_id = serializers.IntegerField()
+    hotel_id = serializers.IntegerField()
 
-    def validate_usuario_id(self, value):
+    def validate(self, data):
+        usuario_id = data["usuario_id"]
+        hotel_id = data["hotel_id"]
+        request = self.context["request"]
+
+        # Validar existencia del usuario
         try:
-            usuario = Usuario.objects.get(id=value)
+            usuario = Usuario.objects.get(id=usuario_id)
         except Usuario.DoesNotExist:
             raise serializers.ValidationError("El usuario no existe.")
-        return value
+
+        # Validar existencia del hotel y que le pertenezca al usuario autenticado
+        try:
+            hotel = Hotel.objects.get(id=hotel_id, propietario=request.user)
+        except Hotel.DoesNotExist:
+            raise serializers.ValidationError("No tienes permiso para asignar empleados a este hotel.")
+
+        # Guardamos el objeto para reutilizarlo en create()
+        self.usuario = usuario
+        self.hotel = hotel
+
+        return data
 
     def create(self, validated_data):
-        request = self.context["request"]
-        usuario_id = validated_data["usuario_id"]
-
-        usuario = Usuario.objects.get(id=usuario_id)
-        hotel = Hotel.objects.get(propietario=request.user)
-
-        empleado, creado = EmpleadoHotel.objects.get_or_create(usuario=usuario, hotel=hotel)
+        empleado, creado = EmpleadoHotel.objects.get_or_create(
+            usuario=self.usuario,
+            hotel=self.hotel
+        )
         return empleado

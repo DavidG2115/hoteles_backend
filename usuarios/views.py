@@ -1,11 +1,11 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, permissions
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Usuario, EmpleadoHotel
 from .serializers import UsuarioSerializer, AsignarEmpleadoSerializer
 from django.contrib.auth.models import User
-from .permissions import EsAdministrador 
+from .permissions import EsAdministrador, PerteneceAlHotel
 from hoteles.models import Hotel
 
 class RegistroUsuarioView(generics.CreateAPIView):
@@ -80,25 +80,35 @@ class AsignarEmpleadoView(APIView):
         return Response({"mensaje": f"{empleado.usuario.username} asignado al hotel {empleado.hotel.nombre} correctamente."})
     
 class DesasignarEmpleadoView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]  # Ya validas dentro de la vista
 
-    def delete(self, request):
+    def post(self, request):
         usuario_id = request.data.get("usuario_id")
+        hotel_id = request.data.get("hotel_id")
 
-        if not usuario_id:
-            return Response({"error": "Falta el campo usuario_id."}, status=status.HTTP_400_BAD_REQUEST)
+        if not usuario_id or not hotel_id:
+            return Response(
+                {"detail": "Se requieren los campos usuario_id y hotel_id."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
+        # Validar que el hotel le pertenezca al usuario autenticado
         try:
-            usuario = Usuario.objects.get(id=usuario_id)
-        except Usuario.DoesNotExist:
-            return Response({"error": "El usuario no existe."}, status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            hotel = Hotel.objects.get(propietario=request.user)
-            relacion = EmpleadoHotel.objects.get(usuario=usuario, hotel=hotel)
-            relacion.delete()
-            return Response({"mensaje": f"{usuario.username} ha sido desasignado del hotel {hotel.nombre}."})
+            hotel = Hotel.objects.get(id=hotel_id, propietario=request.user)
         except Hotel.DoesNotExist:
-            return Response({"error": "No se encontró un hotel asociado al administrador."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "No tienes permiso para modificar este hotel."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Buscar la relación y eliminarla
+        try:
+            empleado = EmpleadoHotel.objects.get(usuario_id=usuario_id, hotel=hotel)
         except EmpleadoHotel.DoesNotExist:
-            return Response({"error": "Este usuario no está asignado a tu hotel."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Este usuario no está asignado a ese hotel."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        empleado.delete()
+        return Response({"mensaje": "Empleado desasignado correctamente."}, status=status.HTTP_204_NO_CONTENT)
