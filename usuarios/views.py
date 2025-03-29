@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from .models import Usuario, EmpleadoHotel
 from .serializers import UsuarioSerializer, AsignarEmpleadoSerializer
 from django.contrib.auth.models import User
-from .permissions import EsAdministrador, PerteneceAlHotel
+from .permissions import EsAdministradorOGerente, PerteneceAlHotel
 from hoteles.models import Hotel
 
 class RegistroUsuarioView(generics.CreateAPIView):
@@ -71,9 +71,37 @@ class EliminarUsuarioView(generics.DestroyAPIView):
         return Response({"mensaje": "Usuario eliminado correctamente."}, status=status.HTTP_200_OK)
     
 class AsignarEmpleadoView(APIView):
-    permission_classes = [IsAuthenticated, EsAdministrador]
+    permission_classes = [IsAuthenticated, EsAdministradorOGerente]  # Solo administradores o gerentes pueden asignar empleados
 
     def post(self, request):
+        hotel_id = request.data.get("hotel_id")
+
+        # Validar que el hotel exista y que el usuario autenticado pertenezca al hotel
+        try:
+            hotel = Hotel.objects.get(id=hotel_id)
+        except Hotel.DoesNotExist:
+            return Response(
+                {"detail": "El hotel no existe."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Verificar si el usuario es administrador o gerente del hotel
+        if request.user.rol not in ["administrador", "gerente"]:
+            return Response(
+                {"detail": "No tienes permisos para asignar empleados a este hotel."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Si es gerente, validar que pertenezca al hotel
+        if request.user.rol == "gerente":
+            pertenece = EmpleadoHotel.objects.filter(usuario=request.user, hotel=hotel).exists()
+            if not pertenece:
+                return Response(
+                    {"detail": "No tienes permisos para asignar empleados a este hotel."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        # Si pasa las validaciones, proceder con la asignación
         serializer = AsignarEmpleadoSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         empleado = serializer.save()
