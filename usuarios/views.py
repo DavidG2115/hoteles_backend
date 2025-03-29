@@ -71,13 +71,16 @@ class EliminarUsuarioView(generics.DestroyAPIView):
         return Response({"mensaje": "Usuario eliminado correctamente."}, status=status.HTTP_200_OK)
     
 class AsignarEmpleadoView(APIView):
-    permission_classes = [EsAdministrador]  # O puedes crear un permiso tipo EsAdministradorDeHotel
+    permission_classes = [IsAuthenticated, EsAdministrador]
 
     def post(self, request):
         serializer = AsignarEmpleadoSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         empleado = serializer.save()
-        return Response({"mensaje": f"{empleado.usuario.username} asignado al hotel {empleado.hotel.nombre} correctamente."})
+        return Response(
+            {"mensaje": f"{empleado.usuario.username} asignado al hotel {empleado.hotel.nombre} correctamente."},
+            status=status.HTTP_201_CREATED
+        )
     
 class DesasignarEmpleadoView(APIView):
     permission_classes = [permissions.IsAuthenticated]  # Ya validas dentro de la vista

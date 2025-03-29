@@ -3,6 +3,7 @@ from rest_framework.permissions import AllowAny
 from .models import Hotel, Habitacion
 from .serializers import HotelSerializer, HabitacionSerializer
 from .permissions import EsAdministrador
+from rest_framework.exceptions import PermissionDenied
 
 # 🔹 Listar Hoteles (Todos pueden ver, solo administradores pueden crear, editar y eliminar)
 class HotelListCreateView(generics.ListCreateAPIView):
@@ -37,8 +38,15 @@ class HabitacionListCreateView(generics.ListCreateAPIView):
         return Habitacion.objects.filter(hotel_id=hotel_id)
 
     def perform_create(self, serializer):
-        hotel_id = self.kwargs['hotel_id']
-        serializer.save(hotel_id=hotel_id)
+        hotel_id = self.kwargs["hotel_id"]
+
+        # Validar que el hotel exista y pertenezca al usuario autenticado
+        try:
+            hotel = Hotel.objects.get(id=hotel_id, propietario=self.request.user)
+        except Hotel.DoesNotExist:
+            raise PermissionDenied("No puedes crear habitaciones para este hotel.")
+
+        serializer.save(hotel=hotel)
 
 # 🔹 Ver, Editar y Eliminar una Habitación (Solo administradores)
 class HabitacionDetailView(generics.RetrieveUpdateDestroyAPIView):

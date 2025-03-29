@@ -38,12 +38,39 @@ class CrearReservacionView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         habitacion = get_object_or_404(Habitacion, id=self.request.data['habitacion'])
+
         if not habitacion.disponible:
             raise serializers.ValidationError("Esta habitación no está disponible.")
-        
-        habitacion.disponible = False  # Marcar como no disponible
-        habitacion.save()
-        serializer.save()
+
+        # 🔹 NO marcamos como no disponible todavía
+        # habitacion.disponible = False
+        # habitacion.save()
+
+        reservacion = serializer.save()
+
+        # 🔹 Enviar correo automático al cliente
+        from django.core.mail import send_mail
+
+        send_mail(
+            "Reserva Recibida - Hoteles de Morelia",
+            f"Hola {reservacion.nombre_cliente},\n\n"
+            f"Gracias por reservar con nosotros. Tu reservación con folio {reservacion.folio} está registrada como *pendiente*.\n\n"
+            f"Por favor realiza el pago correspondiente y envía tu comprobante al correo del hotel para confirmar tu reservación.\n\n"
+            f"Hotel: {habitacion.hotel.nombre}\n"
+            f"Dirección: {habitacion.hotel.direccion}\n"
+            f"Teléfono: {habitacion.hotel.telefono}\n\n"
+            f"Fecha de entrada: {reservacion.fecha_inicio}\n"
+            f"Fecha de salida: {reservacion.fecha_fin}\n"
+            f"Habitación: {habitacion.numero} ({habitacion.tipo})\n"
+            f"Costo por noche: ${habitacion.costo_por_noche}\n"
+            f"Folio: {reservacion.folio}\n\n"
+            f"➡️ IMPORTANTE: Envía el comprobante a: contacto@hotelmorelia.com\n\n"
+            f"Gracias por tu preferencia.",
+            "noreply@hoteles.com",
+            [reservacion.email_cliente],
+            fail_silently=True
+        )
+
 
 # 🔹 Consultar una reservación por folio (Público)
 class ReservacionDetailView(generics.RetrieveAPIView):
