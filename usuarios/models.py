@@ -5,6 +5,7 @@ class Usuario(AbstractUser):
     ROLES = (
         ('administrador', 'Administrador'),
         ('gerente', 'Gerente'),
+        ('recepcionista', 'Recepcionista'),
         ('camarista', 'Camarista'),
         ('mantenimiento', 'Mantenimiento'),
         ('cliente', 'Cliente'),
@@ -21,3 +22,13 @@ class Usuario(AbstractUser):
 
     def __str__(self):
         return f"{self.username} - {self.rol}"
+
+class EmpleadoHotel(models.Model):
+    usuario = models.ForeignKey("usuarios.Usuario", on_delete=models.CASCADE)
+    hotel = models.ForeignKey("hoteles.Hotel", on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('usuario', 'hotel')
+
+    def __str__(self):
+        return f"{self.usuario.username} trabaja en {self.hotel.nombre}"

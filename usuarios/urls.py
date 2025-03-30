@@ -11,4 +11,6 @@ urlpatterns = [
     path('usuarios/', ListarUsuariosView.as_view(), name='obtener_usuarios'),  # Listar usuarios
     path('<int:pk>/editar/', EditarUsuarioView.as_view(), name='editar_usuario'),  # Editar usuario
     path('usuarios/<int:pk>/eliminar/', EliminarUsuarioView.as_view(), name='eliminar_usuario'), # Eliminar usuario
+    path('asignar-empleado/', AsignarEmpleadoView.as_view(), name='asignar-empleado'),
+    path('desasignar-empleado/', DesasignarEmpleadoView.as_view(), name='desasignar-empleado'),
 ]

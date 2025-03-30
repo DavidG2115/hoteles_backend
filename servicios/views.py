@@ -6,6 +6,7 @@ from hoteles.models import Hotel
 from reservaciones.models import Reservacion
 from django.shortcuts import get_object_or_404
 from .permissions import EsAdministradorOGerente
+from django.core.exceptions import ValidationError
 
 # 🔹 Listar y Crear Servicios de un Hotel (Admins pueden crear, todos pueden ver)
 class ServicioListCreateView(generics.ListCreateAPIView):
@@ -44,6 +45,14 @@ class AgregarServicioReservacionView(generics.CreateAPIView):
         servicio_id = self.request.data.get("servicio")
         servicio = get_object_or_404(Servicio, id=servicio_id)
 
+        # 🔒 Validar que el servicio pertenezca al mismo hotel que la reservación
+        hotel_reservacion = reservacion.habitacion.hotel
+        hotel_servicio = servicio.hotel
+
+        if hotel_reservacion.id != hotel_servicio.id:
+            raise ValidationError("El servicio no pertenece al hotel de la reservación.")
+
+        # Si pasa la validación, guardar
         serializer.save(reservacion=reservacion, servicio=servicio)
         
 # 🔹 Listar servicios asociados a una reservación
