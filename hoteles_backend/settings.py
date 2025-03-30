@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'usuarios',
     'hoteles',
-    'reservaciones',
+    # 'reservaciones',
+    'reservaciones.apps.ReservacionesConfig',
     'servicios',
      # Django REST Framework
     'rest_framework',
