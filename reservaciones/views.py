@@ -31,6 +31,28 @@ class CrearReservacionView(generics.CreateAPIView):
         serializer.save()
 
 
+# Eliminar una reservación (Solo administradores y gerentes)
+class EliminarReservacionView(generics.DestroyAPIView):
+    queryset = Reservacion.objects.all()
+    serializer_class = ReservacionSerializer
+    lookup_field = "folio"
+    permission_classes = [IsAuthenticated, EsAdministradorOGerente, PerteneceAlHotel]
+
+    @verificar_usuario_pertenece_al_hotel
+    def delete(self, request, *args, **kwargs):
+        reservacion = self.get_object()
+
+        if reservacion.estado == "confirmada":
+            raise PermissionDenied("No puedes eliminar una reservación que ya fue confirmada.")
+
+        reservacion_data = ReservacionSerializer(reservacion).data
+        response = super().delete(request, *args, **kwargs)
+        return Response(
+            {"mensaje": "Reservación eliminada exitosamente.", "reservacion": reservacion_data},
+            status=status.HTTP_200_OK
+        )
+    
+    
 # 🔹 Consultar una reservación por folio (Público)
 class ReservacionDetailView(generics.RetrieveAPIView):
     queryset = Reservacion.objects.all()
@@ -83,19 +105,6 @@ class ModificarReservacionView(generics.UpdateAPIView):
         reservacion.estado = request.data.get("estado", reservacion.estado)
         reservacion.save()
 
-        # 🔹 Enviar notificación por correo al turista
-        send_mail(
-            "Actualización de Reservación",
-            f"Estimado {reservacion.nombre_cliente},\n\n"
-            f"Su reservación con folio {reservacion.folio} ha sido actualizada.\n"
-            f"Fecha de entrada: {reservacion.fecha_inicio}\n"
-            f"Fecha de salida: {reservacion.fecha_fin}\n"
-            f"Estado: {reservacion.estado}",
-            "garcdavid2101@gmail.com",
-            [reservacion.email_cliente],
-            fail_silently=True
-        )
-
         return Response({"mensaje": "Reservación actualizada y notificada al cliente."}, status=status.HTTP_200_OK)
     
     
@@ -135,22 +144,31 @@ class AprobarSolicitudView(generics.UpdateAPIView):
     @verificar_usuario_pertenece_al_hotel
     def patch(self, request, *args, **kwargs):
         solicitud = self.get_object()
-        solicitud = self.get_serializer(solicitud, data=request.data, partial=True)
-        solicitud.is_valid(raise_exception=True)
-        solicitud = solicitud.save()
+
+        if solicitud.estado in ["aprobada", "rechazada"]:
+            raise PermissionDenied("Esta solicitud ya ha sido procesada.")
+
+        serializer = self.get_serializer(solicitud, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        solicitud = serializer.save()
 
         reservacion = solicitud.reservacion
 
+        # Procesar si fue aprobada
         if solicitud.estado == "aprobada":
+            reservacion._desde_solicitud_aprobada = True
+
             if solicitud.tipo == "eliminacion":
                 reservacion.estado = "cancelada"
                 reservacion.habitacion.disponible = True
                 reservacion.habitacion.save()
             elif solicitud.tipo == "modificacion":
                 reservacion.estado = "modificada"
+
             reservacion.save()
 
         return Response({"mensaje": "Solicitud procesada correctamente."}, status=status.HTTP_200_OK)
+
     
     # listar solicitudes pendientes de reservaciones (Solo administradores y gerentes)
 class SolicitudesPendientesView(generics.ListAPIView):

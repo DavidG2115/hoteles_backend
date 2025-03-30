@@ -3,6 +3,7 @@ from .views import *
 
 urlpatterns = [
     path('reservaciones/crear/', CrearReservacionView.as_view(), name='crear_reservacion'),
+    path('reservaciones/<uuid:folio>/eliminar/', EliminarReservacionView.as_view(), name='eliminar_reservacion'),
     path('reservaciones/<uuid:folio>/', ReservacionDetailView.as_view(), name='detalle_reservacion'),
     path('reservaciones/<uuid:folio>/cancelar/', CancelarReservacionView.as_view(), name='cancelar_reservacion'),
     path('reservaciones/<uuid:folio>/editar/', ModificarReservacionView.as_view(), name='editar_reservacion'),

@@ -1,0 +1,100 @@
+<!-- templates/emails/reservacion.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if tipo_correo == "creacion" %}Confirmación de Reservación{% elif tipo_correo == "actualizacion" %}Actualización de Reservación{% elif tipo_correo == "aprobacion" %}Aprobación de Solicitud{% endif %}</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 30px;">
+    <div style="max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 10px; padding: 30px;">
+
+        <!-- Encabezado dinámico -->
+        <h2 style="color: #007BFF; text-align: center;">
+            {% if tipo_correo == "creacion" %}
+                ¡Gracias por tu reservación, {{ nombre }}!
+            {% elif tipo_correo == "actualizacion" %}
+                Actualización de tu reservación
+            {% elif tipo_correo == "aprobacion" %}
+                Tu solicitud ha sido aprobada
+            {% elif tipo_correo == "cancelacion" %}
+                Tu reservación ha sido cancelada
+            {% endif %}
+            
+        </h2>
+
+        <!-- Mensaje dinámico -->
+        <p style="font-size: 16px; line-height: 1.5;">
+            {% if tipo_correo == "creacion" %}
+                Tu reservación con folio <strong>{{ folio }}</strong> ha sido registrada exitosamente.
+            {% elif tipo_correo == "actualizacion" %}
+                Tu reservación con folio <strong>{{ folio }}</strong> ha cambiado al estado: <strong>{{ estado }}</strong>.
+            {% elif tipo_correo == "aprobacion" %}
+                Hola {{ nombre }}, la solicitud sobre tu reservación con folio <strong>{{ folio }}</strong> ha sido aprobada.
+            {% elif tipo_correo == "cancelacion" %}
+                Hola {{ nombre }}, la reservación con folio <strong>{{ folio }}</strong> ha sido cancelada.
+            {% endif %}
+        </p>
+
+        <!-- Información común -->
+        <p><strong>Fecha de entrada:</strong> {{ fecha_inicio }}</p>
+        <p><strong>Fecha de salida:</strong> {{ fecha_fin }}</p>
+        <p><strong>Estado:</strong> {{ estado }}</p>
+        <p><strong>Tipo de habitación:</strong> {{ habitacion.tipo }}</p>
+        <p><strong>Costo por noche:</strong> ${{ habitacion.costo_por_noche }} MXN</p>
+        {% comment %} <p><strong>Total de la reservación:</strong> ${{ total }} MXN</p> {% endcomment %}
+
+        <!-- Botón dinámico -->
+        <div style="text-align: center; margin: 20px 0;">
+            <a href="{{ url_gestion_reservacion }}" style="background-color: #007BFF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                {% if tipo_correo == "creacion" %}
+                    Gestionar Reservación
+                {% elif tipo_correo == "actualizacion" %}
+                    Ver Detalles
+                {% elif tipo_correo == "aprobacion" %}
+                    Ver Solicitud
+                {% endif %}
+            </a>
+        </div>
+
+        <hr style="margin: 40px 0;">
+
+        <!-- Métodos de Pago (solo para creación) -->
+        {% if tipo_correo == "creacion" %}
+        <h3>Métodos de Pago</h3>
+        <p style="font-size: 14px; line-height: 1.5;">
+            Puedes realizar el pago de tu reservación utilizando los siguientes métodos:
+        </p>
+        <ul>
+            <li>Tarjetas de crédito y débito (Visa, MasterCard, American Express)</li>
+            <li>Transferencia bancaria:</li>
+        </ul>
+        <p style="font-size: 14px; line-height: 1.5;">
+            <strong>CLABE:</strong> 012345678901234567<br>
+            <strong>Banco:</strong> Banco Ficticio<br>
+            <strong>Beneficiario:</strong> Hoteles de Morelia, A.C.
+        </p>
+        {% endif %}
+
+        <hr style="margin: 40px 0;">
+
+        <h3>Políticas del Hotel</h3>
+        <ul>
+            <li>Check-in: 3:00 PM</li>
+            <li>Check-out: 12:00 PM</li>
+            <li>Cancelaciones: Sin costo hasta 24 horas antes de la fecha de entrada.</li>
+        </ul>
+
+        <div style="text-align: center; font-size: 12px; color: #888; margin-top: 20px;">
+            Asociación de Hoteles de Morelia, A.C.<br>
+            contacto@hotelmorelia.com<br>
+            Tel: (443) 123-4567<br><br>
+            Síguenos en nuestras redes sociales:
+            <a href="https://facebook.com/hotelmorelia" style="color: #007BFF;">Facebook</a> |
+            <a href="https://instagram.com/hotelmorelia" style="color: #007BFF;">Instagram</a>
+            <br><br>
+            <em>Este correo fue generado automáticamente. No respondas a este mensaje.</em>
+        </div>
+    </div>
+</body>
+</html>
