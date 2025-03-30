@@ -13,3 +13,10 @@ class EsSuperAdmin(BasePermission):
     """
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and request.user.is_superuser
+class EsJefeCamaristas(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.rol == "camarista"
+
+class EsJefeMantenimiento(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.rol == "mantenimiento"

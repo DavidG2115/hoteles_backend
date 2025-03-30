@@ -28,3 +28,14 @@ class HabitacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Habitacion
         fields = '__all__'
+
+class HabitacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Habitacion
+        fields = "__all__"
+
+
+class HabitacionPublicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Habitacion
+        fields = ["id", "numero", "tipo", "costo_por_noche", "disponible"]

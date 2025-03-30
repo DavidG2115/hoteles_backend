@@ -18,7 +18,20 @@ class Habitacion(models.Model):
         ('suite', 'Suite'),
         ('familiar', 'Familiar'),
     )
+    ESTADOS_LIMPIEZA = (
+        ("sucia", "Sucia"),
+        ("en_limpieza", "En limpieza"),
+        ("limpia", "Limpia"),
+    )
 
+    ESTADOS_MANTENIMIENTO = (
+        ("operativa", "Operativa"),
+        ("en_mantenimiento", "En mantenimiento"),
+        ("mantenimiento_realizado", "Mantenimiento realizado"),
+    )
+
+    estado_limpieza = models.CharField(max_length=20, choices=ESTADOS_LIMPIEZA, default="limpia")
+    estado_mantenimiento = models.CharField(max_length=30, choices=ESTADOS_MANTENIMIENTO, default="operativa")
     hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE, related_name="habitaciones")
     numero = models.CharField(max_length=10)  # Número de habitación
     tipo = models.CharField(max_length=20, choices=TIPOS_HABITACION)
