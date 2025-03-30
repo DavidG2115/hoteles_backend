@@ -12,6 +12,7 @@ from django.core.mail import send_mail
 from .permissions import EsAdministradorOGerente  # 🔹 Importar el nuevo permiso
 from usuarios.permissions import PerteneceAlHotel
 from usuarios.models import EmpleadoHotel
+from .decorators import verificar_reservacion_activa, verificar_usuario_pertenece_al_hotel, verificar_recepcionista_pertenece_hotel
 
 
 # 🔹 Crear una Reservación
@@ -66,37 +67,39 @@ class ReservacionDetailView(generics.RetrieveAPIView):
         folio = self.kwargs["folio"]
         return get_object_or_404(Reservacion, folio=folio)
     
-# 🔹 Cancelar una reservación (Solo administradores y gerentes)
+# 🔹 Cancelar una reservación (Solo administradores y gerentes)class CancelarReservacionView(generics.UpdateAPIView):
 class CancelarReservacionView(generics.UpdateAPIView):
     queryset = Reservacion.objects.all()
     serializer_class = ReservacionSerializer
-    permission_classes = [EsAdministradorOGerente, PerteneceAlHotel]  # 🔹 Permitir solo a admins y gerentes
+    permission_classes = [EsAdministradorOGerente, PerteneceAlHotel]
 
+    @verificar_reservacion_activa
+    @verificar_usuario_pertenece_al_hotel
     def patch(self, request, *args, **kwargs):
-        reservacion = get_object_or_404(Reservacion, folio=self.kwargs["folio"])
-
-        # Marcar la reservación como cancelada
+        reservacion = self.get_object()
         reservacion.estado = "cancelada"
         reservacion.save()
 
-        # 🔹 Enviar notificación por correo al turista
         send_mail(
             "Cancelación de Reservación",
             f"Estimado {reservacion.nombre_cliente},\n\n"
-            f"Su reservación con folio {reservacion.folio} ha sido cancelada por el hotel.",
-            "garcdavid2101@gmail.com",
+            f"Su reservación con folio {reservacion.folio} ha sido cancelada.",
+            "noreply@hoteles.com",
             [reservacion.email_cliente],
             fail_silently=True
         )
 
         return Response({"mensaje": "Reservación cancelada y notificada al cliente."}, status=status.HTTP_200_OK)
+
     
 # 🔹 Modificar una reservación (Solo administradores y gerentes)
 class ModificarReservacionView(generics.UpdateAPIView):
     queryset = Reservacion.objects.all()
     serializer_class = ReservacionSerializer
-    permission_classes = [EsAdministradorOGerente]  # 🔹 Permitir solo a admins y gerentes
+    permission_classes = [EsAdministradorOGerente, PerteneceAlHotel]
 
+    @verificar_reservacion_activa
+    @verificar_usuario_pertenece_al_hotel
     def patch(self, request, *args, **kwargs):
         reservacion = get_object_or_404(Reservacion, folio=self.kwargs["folio"])
 
@@ -120,26 +123,24 @@ class ModificarReservacionView(generics.UpdateAPIView):
         )
 
         return Response({"mensaje": "Reservación actualizada y notificada al cliente."}, status=status.HTTP_200_OK)
-# 🔹 Listar reservaciones de un hotel (Solo administradores)
+    
+    
+# 🔹 Listar reservaciones de su hotel (Solo administradores y gerentes)
 class ReservacionesHotelView(generics.ListAPIView):
     serializer_class = ReservacionSerializer
     permission_classes = [EsAdministradorOGerente]  # 🔹 Solo autenticados
 
     def get_queryset(self):
         hotel_id = self.kwargs["hotel_id"]
-        return Reservacion.objects.filter(habitacion__hotel_id=hotel_id)
-    
-# 🔹 Listar todas las reservaciones (Solo administradores y gerentes)
-class ListarTodasReservacionesView(generics.ListAPIView):  # 🔹 ListAPIView permite GET
-    queryset = Reservacion.objects.all()
-    serializer_class = ReservacionSerializer
-    permission_classes = [IsAuthenticated]  # Solo autenticados
+        user = self.request.user
 
-    def get_queryset(self):
-        # Solo administradores y gerentes pueden ver las reservaciones
-        if self.request.user.rol in ["administrador", "gerente"]:
-            return Reservacion.objects.all()
-        return Reservacion.objects.none()  # Si no es admin/gerente, no devuelve nada
+        # Verifica explícitamente que el usuario pertenece al hotel consultado
+        pertenece = EmpleadoHotel.objects.filter(usuario=user, hotel_id=hotel_id).exists()
+
+        if not pertenece:
+            raise PermissionDenied("No perteneces a este hotel.")
+
+        return Reservacion.objects.filter(habitacion__hotel_id=hotel_id)
     
     
 class CrearSolicitudModificacionView(generics.CreateAPIView):
@@ -147,20 +148,9 @@ class CrearSolicitudModificacionView(generics.CreateAPIView):
     serializer_class = SolicitudModificacionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    @verificar_recepcionista_pertenece_hotel
     def perform_create(self, serializer):
-        user = self.request.user
-        reservacion = serializer.validated_data["reservacion"]
-
-        if user.rol != "recepcionista":
-            raise PermissionDenied("Solo los recepcionistas pueden crear solicitudes.")
-
-        hotel_reservacion = reservacion.habitacion.hotel
-        pertenece = EmpleadoHotel.objects.filter(usuario=user, hotel=hotel_reservacion).exists()
-
-        if not pertenece:
-            raise PermissionDenied("No perteneces al hotel de esta reservación.")
-
-        serializer.save(solicitante=user)
+        serializer.save(solicitante=self.request.user)
         
         
 class AprobarSolicitudView(generics.UpdateAPIView):
@@ -168,59 +158,36 @@ class AprobarSolicitudView(generics.UpdateAPIView):
     serializer_class = SolicitudModificacionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def perform_update(self, serializer):
-        user = self.request.user
-        solicitud = serializer.instance
-        print("🔁 Se intenta aprobar/rechazar solicitud...")
-        
+    @verificar_usuario_pertenece_al_hotel
+    def patch(self, request, *args, **kwargs):
+        solicitud = self.get_object()
+        solicitud = self.get_serializer(solicitud, data=request.data, partial=True)
+        solicitud.is_valid(raise_exception=True)
+        solicitud = solicitud.save()
 
-        # Verificar que sea gerente del hotel correspondiente
-        hotel = solicitud.reservacion.habitacion.hotel
-        if user.rol != "administrador" and user.rol != "gerente" or not EmpleadoHotel.objects.filter(usuario=user, hotel=hotel).exists():
-            raise PermissionDenied("Solo el gerente del hotel puede aprobar esta solicitud.")
-        
-        
-
-
-        solicitud = serializer.save()
         reservacion = solicitud.reservacion
 
         if solicitud.estado == "aprobada":
             if solicitud.tipo == "eliminacion":
                 reservacion.estado = "cancelada"
-                reservacion.save()
                 reservacion.habitacion.disponible = True
                 reservacion.habitacion.save()
-
-                send_mail(
-                    "Cancelación de Reservación",
-                    f"Estimado {reservacion.nombre_cliente},\n\n"
-                    f"Su reservación con folio {reservacion.folio} ha sido cancelada por el hotel.",
-                    "noreply@hoteles.com",
-                    [reservacion.email_cliente],
-                    fail_silently=True
-                )
-
             elif solicitud.tipo == "modificacion":
-                # Aquí puedes aplicar más cambios si se guardan (como nuevas fechas)
                 reservacion.estado = "modificada"
-                reservacion.save()
+            reservacion.save()
 
-                send_mail(
-                    "Actualización de Reservación",
-                    f"Estimado {reservacion.nombre_cliente},\n\n"
-                    f"Su reservación con folio {reservacion.folio} ha sido modificada por el hotel.",
-                    "noreply@hoteles.com",
-                    [reservacion.email_cliente],
-                    fail_silently=True
-                )
+            send_mail(
+                "Actualización de Reservación",
+                f"Estimado {reservacion.nombre_cliente},\n\n"
+                f"Su reservación con folio {reservacion.folio} ha sido actualizada.",
+                "noreply@hoteles.com",
+                [reservacion.email_cliente],
+                fail_silently=True
+            )
 
-        elif solicitud.estado == "rechazada":
-            # Puedes agregar lógica para notificar al solicitante si deseas
-            pass
-        
-        return Response({"mensaje": "Solicitud actualizada."}, status=status.HTTP_200_OK)
-
+        return Response({"mensaje": "Solicitud procesada correctamente."}, status=status.HTTP_200_OK)
+    
+    # listar solicitudes pendientes de reservaciones (Solo administradores y gerentes)
 class SolicitudesPendientesView(generics.ListAPIView):
     serializer_class = SolicitudModificacionSerializer
     permission_classes = [permissions.IsAuthenticated]
