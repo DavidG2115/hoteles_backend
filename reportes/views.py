@@ -16,18 +16,26 @@ class ReporteReservacionesView(APIView):
         inicio = request.GET.get('inicio')
         fin = request.GET.get('fin')
 
+        try:
+            inicio = datetime.strptime(inicio, "%Y-%m-%d").date()
+            fin = datetime.strptime(fin, "%Y-%m-%d").date()
+        except:
+            return Response({"error": "Formato de fechas inválido. Usa YYYY-MM-DD."}, status=400)
+
         reservaciones = Reservacion.objects.filter(
             habitacion__hotel_id=hotel_id,
             fecha_inicio__gte=inicio,
             fecha_fin__lte=fin
         )
 
-        total_reservas = reservaciones.count()
+        por_estado = reservaciones.values('estado').annotate(total=Count('id'))
+
         habitaciones_ocupadas = reservaciones.values('habitacion').distinct().count()
 
         return Response({
-            "total_reservaciones": total_reservas,
-            "habitaciones_ocupadas": habitaciones_ocupadas
+            "total_reservaciones": reservaciones.count(),
+            "habitaciones_ocupadas": habitaciones_ocupadas,
+            "estado_reservaciones": list(por_estado)
         })
 
 class ReporteServiciosView(APIView):
