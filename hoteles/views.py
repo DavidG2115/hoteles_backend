@@ -9,6 +9,7 @@ from rest_framework.exceptions import PermissionDenied
 from usuarios.permissions import EsJefeCamaristas, EsJefeMantenimiento
 from .models import Habitacion
 from usuarios.models import EmpleadoHotel
+from reservaciones.models import Reservacion
 
 # 🔹 Listar Habitaciones Disponibles (Todos pueden ver ) 
 class DisponibilidadHabitacionesView(generics.ListAPIView):
@@ -20,12 +21,19 @@ class DisponibilidadHabitacionesView(generics.ListAPIView):
         fecha_inicio = self.request.query_params.get('fecha_inicio')
         fecha_fin = self.request.query_params.get('fecha_fin')
 
-        if hotel_id and fecha_inicio and fecha_fin:
-            return Habitacion.objects.filter(
-                hotel_id=hotel_id,
-                disponible=True
-            )
-        return Habitacion.objects.none()
+        # 🔍 Buscar habitaciones ocupadas en esas fechas
+        habitaciones_ocupadas = Reservacion.objects.filter(
+            habitacion__hotel_id=hotel_id,
+            estado__in=["pendiente", "confirmada", "modificada"],  # Reservaciones activas
+            fecha_inicio__lt=fecha_fin,
+            fecha_fin__gt=fecha_inicio
+        ).values_list("habitacion_id", flat=True)
+
+        # ✅ Retornar habitaciones que NO están ocupadas
+        return Habitacion.objects.filter(
+            hotel_id=hotel_id,
+            disponible=True,
+        ).exclude(id__in=habitaciones_ocupadas)
 # 🔹 Listar Hoteles (Todos pueden ver, solo administradores pueden crear, editar y eliminar)
 class HotelListCreateView(generics.ListCreateAPIView):
     queryset = Hotel.objects.all()
