@@ -6,10 +6,9 @@ from .serializers import ReservacionSerializer, SolicitudModificacionSerializer
 from hoteles.models import Habitacion
 from django.shortcuts import get_object_or_404
 from hoteles.models import Habitacion
-from hoteles.serializers import HabitacionSerializer
 from rest_framework.response import Response
 from django.core.mail import send_mail
-from .permissions import EsAdministradorOGerente  # 🔹 Importar el nuevo permiso
+from .permissions import EsAdministradorOGerente
 from usuarios.permissions import PerteneceAlHotel
 from usuarios.models import EmpleadoHotel
 from .decorators import verificar_reservacion_activa, verificar_usuario_pertenece_al_hotel, verificar_recepcionista_pertenece_hotel

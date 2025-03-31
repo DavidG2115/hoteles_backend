@@ -16,6 +16,7 @@ def enviar_email_nueva_reservacion(sender, instance, created, **kwargs):
 
     # Contexto con datos dinámicos
     context = {
+        "tipo_correo": "creacion",
         "nombre": instance.nombre_cliente,
         "folio": instance.folio,
         "fecha_inicio": instance.fecha_inicio,

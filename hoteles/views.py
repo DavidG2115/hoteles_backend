@@ -81,7 +81,7 @@ class HabitacionListCreateView(generics.ListCreateAPIView):
 class HabitacionDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Habitacion.objects.all()
     serializer_class = HabitacionSerializer
-    permission_classes = [EsAdministrador]  # 🔹 Solo administradores pueden modificar habitaciones
+    permission_classes = [EsAdministrador]  
 
 # 🔹 View para actualizar estado de limpieza
 class ActualizarEstadoLimpiezaView(APIView):
