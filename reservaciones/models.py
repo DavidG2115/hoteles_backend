@@ -17,9 +17,14 @@ class Reservacion(models.Model):
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField()
     estado = models.CharField(max_length=20, choices=ESTADO_RESERVA, default='pendiente')
+    usuario = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return f"Reservación {self.folio} - {self.estado}"
+        nombre = self.usuario.nombre if self.usuario else self.nombre_cliente
+        return f"Reservación de {nombre} - {self.folio} ({self.estado})"
+
+
+    
 
 
 

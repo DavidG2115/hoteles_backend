@@ -28,7 +28,8 @@ class CrearReservacionView(generics.CreateAPIView):
             raise serializers.ValidationError("Esta habitación no está disponible.")
 
         # Guarda la reservación (el email será enviado automáticamente desde signals.py)
-        serializer.save()
+        usuario = self.request.user if self.request.user.is_authenticated else None
+        serializer.save(usuario=usuario)
 
 
 # Eliminar una reservación (Solo administradores y gerentes)
@@ -173,14 +174,10 @@ class AprobarSolicitudView(generics.UpdateAPIView):
     # listar solicitudes pendientes de reservaciones (Solo administradores y gerentes)
 class SolicitudesPendientesView(generics.ListAPIView):
     serializer_class = SolicitudModificacionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, EsAdministradorOGerente]
 
     def get_queryset(self):
         user = self.request.user
-
-        # Validar que sea gerente
-        if user.rol != "administrador" and user.rol != "gerente":
-            return SolicitudModificacionReservacion.objects.none()
 
         # Obtener hoteles donde trabaja el gerente
         hoteles_ids = EmpleadoHotel.objects.filter(usuario=user).values_list("hotel_id", flat=True)
