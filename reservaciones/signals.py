@@ -4,7 +4,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from .models import Reservacion, SolicitudModificacionReservacion
 
-# 🔸 Al crear una reservación
+# Al crear una reservación
 @receiver(post_save, sender=Reservacion)
 def enviar_email_nueva_reservacion(sender, instance, created, **kwargs):
     if not created:
@@ -34,7 +34,7 @@ def enviar_email_nueva_reservacion(sender, instance, created, **kwargs):
     msg.attach_alternative(html_content, "text/html")
     msg.send()
 
-# 🔸 Al modificar una reservación
+# Al modificar una reservación
 @receiver(post_save, sender=Reservacion)
 def enviar_email_actualizacion_reservacion(sender, instance, created, **kwargs):
     if created:
@@ -64,7 +64,7 @@ def enviar_email_actualizacion_reservacion(sender, instance, created, **kwargs):
     msg.attach_alternative(html_content, "text/html")
     msg.send()
     
-# 🔸 Al aprobar una solicitud de modificación 
+# Al aprobar una solicitud de modificación 
 @receiver(post_save, sender=SolicitudModificacionReservacion)
 def enviar_email_resultado_solicitud(sender, instance, created, **kwargs):
     if created or instance.estado == "pendiente":
@@ -97,7 +97,7 @@ def enviar_email_resultado_solicitud(sender, instance, created, **kwargs):
         text_content = f"La solicitud sobre tu reservación {reservacion.folio} ha sido rechazada."
 
     else:
-        return  # Por seguridad: solo permitimos estados válidos
+        return 
 
     # Enviar correo
     context = {

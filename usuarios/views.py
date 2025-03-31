@@ -6,36 +6,32 @@ from .models import Usuario, EmpleadoHotel
 from .serializers import UsuarioSerializer, AsignarEmpleadoSerializer
 from .permissions import EsAdministradorOGerenteDelHotel, EsAdministrador
 
+# Crear usuario (Público)
 class RegistroUsuarioView(generics.CreateAPIView):
-    """
-    View para registrar nuevos usuarios.
-    """
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
     permission_classes = [AllowAny]
 
+# Listar información del usuario autenticado (Cualquier usuario autenticado)
 class PerfilUsuarioView(APIView):
-    """
-    View para obtener el perfil del usuario autenticado.
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         serializer = UsuarioSerializer(request.user)
         return Response(serializer.data)
     
-# 🔹 Listar todos los usuarios (Solo administradores)
+# Listar todos los usuarios (Solo administradores)
 class ListarUsuariosView(generics.ListAPIView):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
-    permission_classes = [IsAuthenticated, EsAdministrador]  # 🔹 Solo autenticados pueden ver esto
+    permission_classes = [IsAuthenticated, EsAdministrador] 
 
     
-# 🔹 Editar un usuario (Solo administradores pueden modificar cualquier usuario)
+# Editar un usuario (Solo administradores pueden modificar cualquier usuario)
 class EditarUsuarioView(generics.UpdateAPIView):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
-    permission_classes = [IsAuthenticated, EsAdministrador]  # 🔹 Solo autenticados
+    permission_classes = [IsAuthenticated, EsAdministrador]
 
     
     
@@ -43,11 +39,12 @@ class EditarUsuarioView(generics.UpdateAPIView):
 class EliminarUsuarioView(generics.DestroyAPIView):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
-    permission_classes = [IsAuthenticated, EsAdministrador]  # Solo admins lo controlarán en el método
+    permission_classes = [IsAuthenticated, EsAdministrador] 
 
     
+    # Asignar empleado a un hotel (Solo administradores y gerentes del hotel)
 class AsignarEmpleadoView(APIView):
-    permission_classes = [IsAuthenticated, EsAdministradorOGerenteDelHotel]  # Usar el permiso personalizado
+    permission_classes = [IsAuthenticated, EsAdministrador] 
 
     def post(self, request):
         serializer = AsignarEmpleadoSerializer(data=request.data, context={'request': request})
@@ -58,9 +55,9 @@ class AsignarEmpleadoView(APIView):
             status=status.HTTP_201_CREATED
         )
     
-# 
+# Desasignar empleado de un hotel (Solo administradores y gerentes del hotel)
 class DesasignarEmpleadoView(APIView):
-    permission_classes = [IsAuthenticated, EsAdministrador]  # Usar el permiso personalizado
+    permission_classes = [IsAuthenticated, EsAdministrador]
 
     def post(self, request):
         usuario_id = request.data.get("usuario_id")

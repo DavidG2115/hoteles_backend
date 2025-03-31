@@ -14,7 +14,7 @@ from usuarios.models import EmpleadoHotel
 from .decorators import verificar_reservacion_activa, verificar_usuario_pertenece_al_hotel, verificar_recepcionista_pertenece_hotel
 
 
-# 🔹 Crear una Reservación
+# Crear una Reservación
 class CrearReservacionView(generics.CreateAPIView):
     queryset = Reservacion.objects.all()
     serializer_class = ReservacionSerializer
@@ -53,17 +53,17 @@ class EliminarReservacionView(generics.DestroyAPIView):
         )
     
     
-# 🔹 Consultar una reservación por folio (Público)
+# Consultar una reservación por folio (Público)
 class ReservacionDetailView(generics.RetrieveAPIView):
     queryset = Reservacion.objects.all()
     serializer_class = ReservacionSerializer
-    permission_classes = [AllowAny]  # 🔹 Cualquier usuario puede consultar una reservación
+    permission_classes = [AllowAny]
 
     def get_object(self):
         folio = self.kwargs["folio"]
         return get_object_or_404(Reservacion, folio=folio)
     
-# 🔹 Cancelar una reservación (Solo administradores y gerentes)class CancelarReservacionView(generics.UpdateAPIView):
+# Cancelar una reservación (Solo administradores y gerentes)class CancelarReservacionView(generics.UpdateAPIView):
 class CancelarReservacionView(generics.UpdateAPIView):
     queryset = Reservacion.objects.all()
     serializer_class = ReservacionSerializer
@@ -88,7 +88,7 @@ class CancelarReservacionView(generics.UpdateAPIView):
         return Response({"mensaje": "Reservación cancelada y notificada al cliente."}, status=status.HTTP_200_OK)
 
     
-# 🔹 Modificar una reservación (Solo administradores y gerentes)
+# Modificar una reservación (Solo administradores y gerentes)
 class ModificarReservacionView(generics.UpdateAPIView):
     queryset = Reservacion.objects.all()
     serializer_class = ReservacionSerializer
@@ -108,16 +108,14 @@ class ModificarReservacionView(generics.UpdateAPIView):
         return Response({"mensaje": "Reservación actualizada y notificada al cliente."}, status=status.HTTP_200_OK)
     
     
-# 🔹 Listar reservaciones de su hotel (Solo administradores y gerentes)
+# Listar reservaciones de su hotel (Solo administradores y gerentes)
 class ReservacionesHotelView(generics.ListAPIView):
     serializer_class = ReservacionSerializer
-    permission_classes = [EsAdministradorOGerente]  # 🔹 Solo autenticados
+    permission_classes = [EsAdministradorOGerente] 
 
     def get_queryset(self):
         hotel_id = self.kwargs["hotel_id"]
         user = self.request.user
-
-        # Verifica explícitamente que el usuario pertenece al hotel consultado
         pertenece = EmpleadoHotel.objects.filter(usuario=user, hotel_id=hotel_id).exists()
 
         if not pertenece:
@@ -126,6 +124,7 @@ class ReservacionesHotelView(generics.ListAPIView):
         return Reservacion.objects.filter(habitacion__hotel_id=hotel_id)
     
     
+# Crear solicitud de modificación de reservación (Solo recepcionistas)
 class CrearSolicitudModificacionView(generics.CreateAPIView):
     queryset = SolicitudModificacionReservacion.objects.all()
     serializer_class = SolicitudModificacionSerializer
@@ -135,7 +134,7 @@ class CrearSolicitudModificacionView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(solicitante=self.request.user)
         
-        
+# Aprobar o rechazar solicitud de modificación de reservación (Solo administradores y gerentes)       
 class AprobarSolicitudView(generics.UpdateAPIView):
     queryset = SolicitudModificacionReservacion.objects.all()
     serializer_class = SolicitudModificacionSerializer
@@ -170,18 +169,15 @@ class AprobarSolicitudView(generics.UpdateAPIView):
         return Response({"mensaje": "Solicitud procesada correctamente."}, status=status.HTTP_200_OK)
 
     
-    # listar solicitudes pendientes de reservaciones (Solo administradores y gerentes)
+# listar solicitudes pendientes de reservaciones (Solo administradores y gerentes)
 class SolicitudesPendientesView(generics.ListAPIView):
     serializer_class = SolicitudModificacionSerializer
     permission_classes = [permissions.IsAuthenticated, EsAdministradorOGerente]
 
     def get_queryset(self):
         user = self.request.user
-
-        # Obtener hoteles donde trabaja el gerente
         hoteles_ids = EmpleadoHotel.objects.filter(usuario=user).values_list("hotel_id", flat=True)
 
-        # Filtrar solicitudes pendientes de reservaciones que pertenecen a esos hoteles
         return SolicitudModificacionReservacion.objects.filter(
             estado="pendiente",
             reservacion__habitacion__hotel_id__in=hoteles_ids
