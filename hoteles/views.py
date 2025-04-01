@@ -11,7 +11,7 @@ from .models import Habitacion
 from usuarios.models import EmpleadoHotel
 from reservaciones.models import Reservacion
 
-# 🔹 Listar Habitaciones Disponibles (Todos pueden ver ) 
+# Listar Habitaciones Disponibles (Todos pueden ver ) 
 class DisponibilidadHabitacionesView(generics.ListAPIView):
     serializer_class = HabitacionPublicSerializer
     permission_classes = [AllowAny]
@@ -21,46 +21,47 @@ class DisponibilidadHabitacionesView(generics.ListAPIView):
         fecha_inicio = self.request.query_params.get('fecha_inicio')
         fecha_fin = self.request.query_params.get('fecha_fin')
 
-        # 🔍 Buscar habitaciones ocupadas en esas fechas
+        # Buscar habitaciones ocupadas en esas fechas
         habitaciones_ocupadas = Reservacion.objects.filter(
             habitacion__hotel_id=hotel_id,
-            estado__in=["pendiente", "confirmada", "modificada"],  # Reservaciones activas
+            estado__in=["pendiente", "confirmada", "modificada"],
             fecha_inicio__lt=fecha_fin,
             fecha_fin__gt=fecha_inicio
         ).values_list("habitacion_id", flat=True)
 
-        # ✅ Retornar habitaciones que NO están ocupadas
         return Habitacion.objects.filter(
             hotel_id=hotel_id,
             disponible=True,
         ).exclude(id__in=habitaciones_ocupadas)
-# 🔹 Listar Hoteles (Todos pueden ver, solo administradores pueden crear, editar y eliminar)
+        
+        
+# Listar Hoteles (Todos pueden ver, solo administradores pueden crear, editar y eliminar)
 class HotelListCreateView(generics.ListCreateAPIView):
     queryset = Hotel.objects.all()
     serializer_class = HotelSerializer
 
     def get_permissions(self):
         if self.request.method in ["POST", "PUT", "PATCH", "DELETE"]:
-            return [EsAdministrador()]  # 🔹 Solo administradores pueden modificar hoteles
-        return [AllowAny()]  # 🔹 Cualquier usuario puede ver hoteles
+            return [EsAdministrador()]  
+        return [AllowAny()]
 
     def perform_create(self, serializer):
         serializer.save()
 
-# 🔹 Ver, Editar y Eliminar un Hotel (Solo administradores)
+# Ver, Editar y Eliminar un Hotel (Solo administradores)
 class HotelDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Hotel.objects.all()
     serializer_class = HotelSerializer
-    permission_classes = [EsAdministrador]  # 🔹 Solo administradores pueden modificar hoteles
+    permission_classes = [EsAdministrador] 
 
-# 🔹 Listar Habitaciones de un Hotel (Todos pueden ver, solo administradores pueden agregar)
+# Listar Habitaciones de un Hotel (Todos pueden ver, solo administradores pueden agregar)
 class HabitacionListCreateView(generics.ListCreateAPIView):
     serializer_class = HabitacionSerializer
 
     def get_permissions(self):
         if self.request.method == "POST":
-            return [EsAdministrador()]  # 🔹 Solo administradores pueden agregar habitaciones
-        return [AllowAny()]  # 🔹 Cualquier usuario puede ver habitaciones
+            return [EsAdministrador()]  
+        return [AllowAny()] 
 
     def get_queryset(self):
         hotel_id = self.kwargs['hotel_id']
@@ -69,7 +70,6 @@ class HabitacionListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         hotel_id = self.kwargs["hotel_id"]
 
-        # Validar que el hotel exista y pertenezca al usuario autenticado
         try:
             hotel = Hotel.objects.get(id=hotel_id, propietario=self.request.user)
         except Hotel.DoesNotExist:
@@ -77,13 +77,13 @@ class HabitacionListCreateView(generics.ListCreateAPIView):
 
         serializer.save(hotel=hotel)
 
-# 🔹 Ver, Editar y Eliminar una Habitación (Solo administradores)
+# Ver, Editar y Eliminar una Habitación (Solo administradores)
 class HabitacionDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Habitacion.objects.all()
     serializer_class = HabitacionSerializer
-    permission_classes = [EsAdministrador]  # 🔹 Solo administradores pueden modificar habitaciones
+    permission_classes = [EsAdministrador]  
 
-# 🔹 View para actualizar estado de limpieza
+# View para actualizar estado de limpieza
 class ActualizarEstadoLimpiezaView(APIView):
     permission_classes = [IsAuthenticated, EsJefeCamaristas]
 
@@ -101,7 +101,7 @@ class ActualizarEstadoLimpiezaView(APIView):
         habitacion.save()
         return Response({"mensaje": "Estado de limpieza actualizado correctamente."})
 
-# 🔹 View para actualizar estado de mantenimiento
+# View para actualizar estado de mantenimiento
 class ActualizarEstadoMantenimientoView(APIView):
     permission_classes = [IsAuthenticated, EsJefeMantenimiento]
 
@@ -120,19 +120,19 @@ class ActualizarEstadoMantenimientoView(APIView):
         return Response({"mensaje": "Estado de mantenimiento actualizado correctamente."})
     
     
+# Listar habitaciones de un hotel para ver estados de limpieza y mantenimiento
 class MisHabitacionesView(generics.ListAPIView):
     serializer_class = HabitacionSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         usuario = self.request.user
+        hoteles_empleado = EmpleadoHotel.objects.filter(
+            usuario=usuario
+        ).values_list("hotel_id", flat=True)
 
-        # Buscar a qué hotel está asignado el usuario
-        hoteles = EmpleadoHotel.objects.filter(usuario=usuario).values_list("hotel_id", flat=True)
+        hoteles_propios = usuario.hoteles.values_list("id", flat=True) if usuario.rol == "administrador" else []
 
-        # Si es propietario (administrador), incluir también sus hoteles
-        if usuario.rol == "administrador":
-            hoteles_propios = usuario.hoteles.values_list("id", flat=True)
-            hoteles = list(hoteles) + list(hoteles_propios)
+        hoteles_ids = set(hoteles_empleado).union(hoteles_propios)
 
-        return Habitacion.objects.filter(hotel_id__in=hoteles)
+        return Habitacion.objects.filter(hotel_id__in=hoteles_ids)

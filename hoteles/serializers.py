@@ -19,7 +19,7 @@ class HotelSerializer(serializers.ModelSerializer):
             except Usuario.DoesNotExist:
                 raise serializers.ValidationError("El propietario especificado no existe o no es administrador.")
         else:
-            propietario = self.context['request'].user  # Por defecto, quien hace la petición
+            propietario = self.context['request'].user  
 
         return Hotel.objects.create(propietario=propietario, **validated_data)
 
